@@ -19,21 +19,9 @@
             }
    })
 
-(defn- get-catpcha-image
-  "get recaptcha image from site, returns image file"
-  [site-url http-header]
-  )
-
-(defn test-get-captcha-image []
-  (let [site-result (client/get "http://www.wmssamples.com/user_interaction/recaptcha.aspx" )
-        body-site-result (site-result :body)
-        ]
-    (println body-site-result)
-    (re-find #"http\://www\.google\.com/recaptcha/api/" body-site-result)
-    )
-  )
-
-(defn- get-challenge [api-key http-header]
+(defn- get-challenge
+  "get challenge key from google site using api-key"
+  [api-key http-header]
   (let [http-resp (client/get (str "http://www.google.com/recaptcha/api/challenge?k=" api-key) http-header)
         http-resp-body (http-resp :body)
         ]
@@ -41,18 +29,42 @@
     )
   )
 
-(defn- test-get-challenge []
-  (get-challenge "6LcAmgAAAAAAADO6kxnkCF5LnukN_nKUJjxsS4UW" some-http-request)
+(defn- get-captcha-api-key
+  "get api key from original site"
+  [http-body-result]
+  (second(re-find #"noscript\?k=(\w+)" http-body-result))
   )
 
-(defn- get-captcha-api-key [url http-header]
-  (let [site-result (client/get url http-header)
-        body-site-result (site-result :body)
-        ]
-    (second(re-find #"noscript\?k=(\w+)" body-site-result))
+(comment (defn- get-challenge-key [http-resp-body]
+           (second (re-find #"id=\"recaptcha_challenge_field\" value=\"([\w-_]+)\"" http-resp-body))
+           ))
+
+(defn- get-image-with-challenge-key
+  [challenge-key http-header]
+  (let [image-http-resp (client/get (str "http://www.google.com/recaptcha/api/image?c=" challenge-key) (conj {:as :byte-array} http-header))]
+    (image-http-resp :body)
     )
   )
 
-(defn- test-get-captcha-api-key []
-  (get-captcha-api-key "http://www.wmssamples.com/user_interaction/recaptcha.aspx" some-http-request)
+(defn- write-file [image-file]
+   (with-open [w (clojure.java.io/output-stream "test-file.jpg")]
+     (.write w image-file)))
+
+(defn- main-get-captcha-image
+  "takes a url and returns the captcha image from that site"
+  [url http-header]
+  (let [http-resp (client/get url http-header)
+        http-resp-body (http-resp :body)
+        api-key (get-captcha-api-key http-resp-body)
+        challenge-key (get-challenge api-key http-header)
+        image-file-binary (get-image-with-challenge-key challenge-key http-header)
+        ]
+    (println image-file-binary)
+    (write-file image-file-binary)
+                                        ;(get-image-with-challenge-key challenge-key http-header)
+    )
+  )
+
+(defn- test-main-get-captcha-image []
+  (main-get-captcha-image "http://www.wmssamples.com/user_interaction/recaptcha.aspx" some-http-request)
   )
