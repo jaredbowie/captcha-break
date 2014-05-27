@@ -1,6 +1,6 @@
 # captchabreak
 
-A Clojure library designed to ... well, that part is up to you.
+Finds the recaptcha in the url's body.  Then gets the recaptcha image and saves it as a file in the project directory.  Currently seeking a solution to get the better/easier images.
 
 ## Usage
 
